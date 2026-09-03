@@ -1,17 +1,28 @@
 import Database from "better-sqlite3";
+import os from "node:os";
 import path from "node:path";
 import fs from "node:fs";
 import type { ProductAnalysis, QaReport, Revision, TechPack } from "@/lib/schemas/tech-pack";
 import type { CoreProductSpec } from "@/lib/schemas/universal";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const DB_PATH = process.env.DATABASE_URL?.startsWith("file:")
-  ? process.env.DATABASE_URL.replace(/^file:/, "")
-  : path.join(DATA_DIR, "app.db");
+const DATA_DIR =
+  process.env.NODE_ENV === "production" || process.env.VERCEL === "1"
+    ? path.join(os.tmpdir(), "data") // /tmp/data on Vercel
+    : path.join(process.cwd(), "data"); // local dev unchanged
+
+const DB_PATH =
+  process.env.DATABASE_URL?.startsWith("file:") &&
+  !((process.env.NODE_ENV === "production" || process.env.VERCEL === "1") && process.env.DATABASE_URL.includes("data"))
+    ? process.env.DATABASE_URL.replace(/^file:/, "")
+    : path.join(DATA_DIR, "app.db");
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const db = new Database(DB_PATH);
-db.pragma("journal_mode = WAL");
+try {
+  db.pragma("journal_mode = WAL");
+} catch {
+  // fallback if filesystem doesn't support WAL
+}
 
 try {
   db.exec("ALTER TABLE projects ADD COLUMN image_back_path TEXT");
