@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200">
+  <defs>
+    <linearGradient id="khaki" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#CBB496"/>
+      <stop offset="1" stop-color="#B49E7E"/>
+    </linearGradient>
+    <linearGradient id="brim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#C0AA8B"/>
+      <stop offset="1" stop-color="#A08A6B"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="26" flood-color="#5b4a33" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="1200" fill="#F4F1EA"/>
+  <!-- crown -->
+  <g filter="url(#soft)">
+    <path d="M340 560
+             C 300 600, 260 700, 300 830
+             C 330 940, 430 990, 600 990
+             C 770 990, 870 940, 900 830
+             C 940 700, 900 600, 860 560 Z"
+          fill="url(#khaki)"/>
+    <!-- crown seams -->
+    <path d="M430 580 C 460 720, 480 860, 520 975" stroke="#a58f6f" stroke-width="7" fill="none"/>
+    <path d="M770 580 C 740 720, 720 860, 680 975" stroke="#a58f6f" stroke-width="7" fill="none"/>
+    <path d="M600 555 L 600 990" stroke="#a58f6f" stroke-width="7" fill="none"/>
+    <!-- brim underside visible under crown -->
+    <ellipse cx="600" cy="560" rx="330" ry="55" fill="#B39D7D"/>
+    <path d="M270 560 C 270 495, 435 455, 600 455 C 765 455, 930 495, 930 560
+             C 930 600, 880 632, 830 648
+             C 720 685, 480 685, 370 648
+             C 320 632, 270 600, 270 560 Z"
+          fill="url(#brim)"/>
+    <!-- topstitching on brim -->
+    <path d="M345 600 C 400 640, 800 640, 855 600" stroke="#8f7a5c" stroke-width="5" fill="none" stroke-dasharray="12 10"/>
+    <!-- crown top ellipse -->
+    <ellipse cx="600" cy="555" rx="265" ry="52" fill="#C9B291"/>
+    <ellipse cx="600" cy="550" rx="230" ry="42" fill="#CFBA9B"/>
+    <!-- topstitching crown centre -->
+    <circle cx="600" cy="550" r="14" fill="none" stroke="#9c8767" stroke-width="6"/>
+    <!-- seam stops on brim -->
+    <path d="M340 640 C 350 660, 370 675, 395 685" stroke="#8f7a5c" stroke-width="6" fill="none"/>
+    <path d="M860 640 C 850 660, 830 675, 805 685" stroke="#8f7a5c" stroke-width="6" fill="none"/>
+  </g>
+</svg>

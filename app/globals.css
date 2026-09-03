@@ -1,0 +1,470 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* ——— Thmanyah Sans (Arabic) — self-hosted, official family — */
+@font-face {
+  font-family: "Thmanyah Sans";
+  src: url("/fonts/thmanyahsans-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Thmanyah Sans";
+  src: url("/fonts/thmanyahsans-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Thmanyah Sans";
+  src: url("/fonts/thmanyahsans-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Thmanyah Sans";
+  src: url("/fonts/thmanyahsans-Black.woff2") format("woff2");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Thmanyah Sans";
+  src: url("/fonts/thmanyahsans-Light.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-source-serif);
+  --font-mono: var(--font-plex);
+  --font-heading: var(--font-fraunces);
+  --font-serif: var(--font-fraunces);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-paper: var(--paper);
+  --color-sheet: var(--sheet);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-signal: var(--signal);
+  --color-signal-deep: var(--signal-deep);
+  --color-hairline: var(--hairline);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  /* ——— Fonts (self-hosted via @fontsource) ——— */
+  --font-sans: "Source Serif 4", ui-serif, Georgia, serif;
+  --font-serif: "Fraunces", ui-serif, Georgia, serif;
+  --font-display: "Fraunces", "Source Serif 4", ui-serif, Georgia, serif;
+  --font-geist-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-fraunces: "Fraunces", ui-serif, Georgia, serif;
+  --font-source-serif: "Source Serif 4", ui-serif, Georgia, serif;
+  --font-plex: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-arabic: "Thmanyah Sans", "IBM Plex Mono", ui-monospace, serif;
+  /* ——— Masdr palette ——— */
+  --paper: #f2f3f5;
+  --sheet: #ffffff;
+  --ink: #232b32;
+  --ink-soft: #5c6670;
+  --signal: #6d4aff;
+  --signal-deep: #5f50bc;
+  --hairline: #e3e5e9;
+  --rule: #232b32;
+  --masdr-purple: #301989;
+  --masdr-lav: #9e8dff;
+  --masdr-night: #080412;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--sheet);
+  --card-foreground: var(--ink);
+  --popover: var(--sheet);
+  --popover-foreground: var(--ink);
+  --primary: var(--masdr-purple);
+  --primary-foreground: #ffffff;
+  --secondary: #e9e9f5;
+  --secondary-foreground: var(--ink);
+  --muted: #e9e9f5;
+  --muted-foreground: var(--ink-soft);
+  --accent: #e9e9f5;
+  --accent-foreground: var(--ink);
+  --destructive: #bc3838;
+  --border: var(--hairline);
+  --input: #d5d7dd;
+  --ring: var(--signal);
+  --chart-1: var(--signal);
+  --chart-2: var(--ink);
+  --chart-3: #9e8dff;
+  --chart-4: #bbb9f9;
+  --chart-5: #5c6670;
+  --radius: 0.75rem;
+  --sidebar: var(--sheet);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--ink);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e9e9f5;
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--hairline);
+  --sidebar-ring: var(--signal);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+    scroll-behavior: smooth;
+  }
+  ::selection {
+    background: var(--signal);
+    color: #ffffff;
+  }
+  /* Scroll-reveal (driven by <Reveal/>) */
+  .reveal {
+    opacity: 0;
+    transform: translateY(22px);
+    transition:
+      opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1) var(--rd, 0ms),
+      transform 0.8s cubic-bezier(0.22, 1, 0.36, 1) var(--rd, 0ms);
+  }
+  .reveal-in {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  /* Pointer parallax (driven by <ParallaxZone/>) */
+  .parallax {
+    transform: translate3d(
+      calc(var(--mx, 0) * var(--px, 0px)),
+      calc(var(--my, 0) * var(--px, 0px)),
+      0
+    );
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+  .glass {
+    background: rgb(255 255 255 / 0.08);
+    border: 1px solid rgb(255 255 255 / 0.16);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .parallax {
+    transform: none;
+  }
+}
+
+@layer utilities {
+  .font-ar {
+    font-family: var(--font-arabic) !important;
+  }
+  .font-ar .font-display,
+  .font-ar .font-serif,
+  .font-ar h1,
+  .font-ar h2,
+  .font-ar h3 {
+    font-family: var(--font-arabic) !important;
+  }
+  /* ——— Blueprint grid: fine graph-paper lines over the paper ground ——— */
+  .bg-blueprint {
+    background-image:
+      linear-gradient(to right, rgb(48 25 137 / 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(48 25 137 / 0.05) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+  .bg-blueprint-fine {
+    background-image:
+      linear-gradient(to right, rgb(48 25 137 / 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(48 25 137 / 0.035) 1px, transparent 1px);
+    background-size: 11px 11px;
+  }
+
+  /* ——— Paper grain ——— */
+  .bg-grain {
+    position: relative;
+  }
+  .bg-grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  }
+
+  /* ——— Hard sheet shadow: layered, print-like ——— */
+  .shadow-sheet {
+    box-shadow:
+      0 1px 0 0 rgb(35 43 50 / 0.05),
+      0 8px 24px -12px rgb(35 43 50 / 0.16);
+  }
+  .shadow-sheet-lg {
+    box-shadow:
+      0 1px 0 0 rgb(27 23 16 / 0.07),
+      0 24px 48px -20px rgb(35 43 50 / 0.3);
+  }
+
+  /* ——— Stamp: rotated dashed seal ——— */
+  .stamp {
+    border: 1.5px dashed currentColor;
+    box-shadow: inset 0 0 0 3px rgb(228 88 15 / 0);
+    letter-spacing: 0.18em;
+  }
+
+  /* ——— Dotted leader for spec-sheet key/value rows ——— */
+  .leader-dots {
+    background-image: radial-gradient(circle, rgb(35 43 50 / 0.3) 1px, transparent 1.2px);
+    background-size: 7px 3px;
+    background-repeat: repeat-x;
+    background-position: 0 100%;
+  }
+
+  /* ——— Motion ——— */
+  .animate-fade-up {
+    animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--d, 0ms);
+  }
+  .animate-bar-grow {
+    transform-origin: left;
+    animation: bar-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--d, 0ms);
+  }
+  .animate-gauge {
+    animation: gauge-draw 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .animate-blink {
+    animation: blink 1.4s steps(2, start) infinite;
+  }
+  .animate-glow-sweep {
+    animation: glow-sweep 2.6s ease-in-out infinite;
+  }
+  .animate-drift {
+    animation: drift var(--drift-dur, 9s) ease-in-out infinite;
+    animation-delay: var(--d, 0ms);
+    will-change: transform;
+  }
+  .animate-spin-slow {
+    animation: spin-slow 14s linear infinite;
+    will-change: transform;
+  }
+  .animate-dash {
+    stroke-dasharray: 6 8;
+    animation: dash-move 1.6s linear infinite;
+  }
+  .animate-needle {
+    animation: needle-sew 3.2s ease-in-out infinite;
+    will-change: transform;
+  }
+  .animate-sweep {
+    animation: tape-sweep 4.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+    will-change: transform;
+  }
+  .glow-purple {
+    box-shadow: 0 0 29px 0 var(--masdr-purple);
+  }
+  .glow-purple-soft {
+    box-shadow: 0 0 22px -4px rgb(48 25 137 / 0.45);
+  }
+}
+
+@keyframes glow-sweep {
+  0%, 100% {
+    transform: translateX(-6px);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateX(6px);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes gauge-draw {
+  from {
+    stroke-dashoffset: var(--gauge-circ, 283);
+  }
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(var(--drift-rot, 0deg));
+  }
+  50% {
+    transform: translate3d(var(--drift-x, 0px), var(--drift-y, -16px), 0)
+      rotate(var(--drift-rot2, 0deg));
+  }
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dash-move {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+
+@keyframes needle-sew {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(26px, -14px);
+  }
+  50% {
+    transform: translate(52px, 0);
+  }
+  75% {
+    transform: translate(26px, 14px);
+  }
+}
+
+@keyframes tape-sweep {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(var(--tape-x, 110px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-drift,
+  .animate-spin-slow,
+  .animate-dash,
+  .animate-needle,
+  .animate-sweep,
+  .animate-gauge,
+  .animate-glow-sweep,
+  .animate-blink {
+    animation: none;
+  }
+}
