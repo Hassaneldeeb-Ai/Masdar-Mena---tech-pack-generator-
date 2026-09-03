@@ -1,0 +1,55 @@
+Masdr - AI Tech Pack Generator: Approach Note
+=============================================
+
+APPROACH
+--------
+I began by exploring the full project structure to understand the architecture before running it.
+The codebase follows a Next.js 15 App Router pattern with a multi-stage AI pipeline at its core.
+I identified three key layers: the frontend (React/shadcn/Tailwind), the API layer (Next.js API
+routes), and the AI/data layer (multi-provider LLM integration with SQLite persistence). Running
+the project was straightforward -- npm install and npm run dev launched the Turbopack dev server
+on localhost:3000. The project is well-structured with clear separation between UI components,
+business logic (lib/ai/, lib/quality/), and data schemas (lib/schemas/).
+
+AI TOOLS AND MODELS USED
+-------------------------
+I used the OpenCode CLI (powered by the mimo-v2.5-free model) as the primary AI assistant for
+exploring and interacting with the codebase. Specifically:
+- OpenCode's explore agent was used to scan the entire project tree, read key files, and return
+  a comprehensive summary of architecture, features, and AI integrations -- saving significant
+  manual investigation time.
+- OpenCode's bash tool was used to install dependencies, start the dev server, and verify
+  the application was running.
+
+The project itself integrates multiple AI providers (Google Gemini, OpenAI GPT-4o, Anthropic
+Claude Sonnet) for its core pipeline, with automatic key detection and mock fallback. Google
+Gemini handles vision analysis, tech pack generation, QA review, image generation (via
+gemini-3.1-flash-image), and video generation (via Veo 3.1). The multi-provider architecture
+is a smart design choice -- it avoids vendor lock-in and enables offline demo mode.
+
+WHAT I WOULD BUILD NEXT (ONE WEEK)
+------------------------------------
+1. Authentication & Multi-User Support: Add user accounts with role-based access (designer,
+   reviewer, factory) so multiple team members can collaborate on tech packs with proper
+   ownership and permissions.
+
+2. Real-Time Collaboration: Implement WebSocket-based live editing so a designer and factory
+   engineer can review and annotate the same tech pack simultaneously.
+
+3. Template System: Build a library of product-category templates (apparel, accessories,
+   footwear, home goods) that pre-populate common BOM items, construction notes, and QA
+   checklists, reducing generation time for repeat categories.
+
+4. Version Diffing UI: Create a visual side-by-side diff viewer for revision history, so
+   reviewers can see exactly what changed between V1.0 and V1.1 with highlighted additions,
+   removals, and modifications.
+
+5. Export Enhancements: Add DXF/DWG export for pattern makers, CSV export for ERP system
+   integration, and automated cost estimation with supplier-linked material pricing.
+
+6. Notification Pipeline: Email/Slack notifications when a tech pack moves between approval
+   stages (AI_DRAFT -> IN_REVIEW -> TECHNICAL_REVIEW -> SAMPLE_APPROVAL -> PRODUCTION_APPROVAL).
+
+7. Test Coverage Expansion: Expand the vitest suite to cover edge cases in the AI pipeline
+   (malformed LLM responses, schema repair loops, provider failover) and add Cypress E2E
+   tests for the full create-to-export workflow.

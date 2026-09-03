@@ -12,7 +12,7 @@ export function buildFlatDrawingSvg(pack: TechPack): string {
   const headVal = (name: string): number | undefined => {
     const rec = head(name);
     const first = rec?.values[Object.keys(rec?.values ?? {})[0] ?? ""];
-    return typeof first === "number" ? first : undefined;
+    return typeof first === "number" && Number.isFinite(first) ? first : undefined;
   };
 
   const style = (extra: string) => `font-family="monospace" font-size="13" fill="#232b32" ${extra}`;

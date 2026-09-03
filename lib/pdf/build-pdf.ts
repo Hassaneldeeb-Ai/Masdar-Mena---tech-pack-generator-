@@ -24,57 +24,81 @@ const LINE = "#d6d3d1";
 const AMBER_BG = "#fef3c7";
 const AMBER_TEXT = "#92400e";
 
-async function loadImageDataUrl(path?: string | null): Promise<string | null> {
-  if (!path) return null;
-  try {
-    const res = await fetch(path);
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    if (blob.type.includes("svg")) {
-      return await rasterizeSvg(await blob.text());
-    }
-    return await blobToDataUrl(blob);
-  } catch {
+export function isValidPdfImage(img?: string | null): img is string {
+  if (!img || typeof img !== "string") return false;
+  return (
+    img.startsWith("data:image/png;base64,") ||
+    img.startsWith("data:image/jpeg;base64,") ||
+    img.startsWith("data:image/jpg;base64,")
+  );
+}
+
+export async function rasterizeImageBlob(blob: Blob): Promise<string | null> {
+  if (typeof window === "undefined" || typeof document === "undefined") {
     return null;
   }
-}
-
-function blobToDataUrl(blob: Blob): Promise<string | null> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : null);
-    reader.onerror = () => resolve(null);
-    reader.readAsDataURL(blob);
-  });
-}
-
-async function rasterizeSvg(svgText: string): Promise<string | null> {
   try {
-    const blob = new Blob([svgText], { type: "image/svg+xml" });
     const url = URL.createObjectURL(blob);
     try {
       const img = await new Promise<HTMLImageElement>((resolve, reject) => {
         const el = new Image();
         el.onload = () => resolve(el);
-        el.onerror = () => reject(new Error("svg load failed"));
+        el.onerror = () => reject(new Error("image load failed"));
         el.src = url;
       });
-      const size = 800;
+      const width = img.naturalWidth || img.width || 800;
+      const height = img.naturalHeight || img.height || 800;
       const canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
+      canvas.width = width;
+      canvas.height = height;
       const ctx = canvas.getContext("2d");
       if (!ctx) return null;
       ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, size, size);
-      ctx.drawImage(img, 0, 0, size, size);
-      return canvas.toDataURL("image/png");
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL("image/png");
+      return isValidPdfImage(dataUrl) ? dataUrl : null;
     } finally {
       URL.revokeObjectURL(url);
     }
   } catch {
     return null;
   }
+}
+
+export async function rasterizeSvg(svgText?: string | null): Promise<string | null> {
+  if (!svgText || typeof window === "undefined" || typeof document === "undefined") {
+    return null;
+  }
+  try {
+    const blob = new Blob([svgText], { type: "image/svg+xml" });
+    return await rasterizeImageBlob(blob);
+  } catch {
+    return null;
+  }
+}
+
+export async function loadImageDataUrl(path?: string | null): Promise<string | null> {
+  if (!path || typeof path !== "string") return null;
+
+  // If already a valid JPEG or PNG data URL, return it directly
+  if (isValidPdfImage(path)) {
+    return path;
+  }
+
+  // If in browser, fetch and convert via canvas to PNG data URL
+  if (typeof window !== "undefined" && typeof fetch === "function") {
+    try {
+      const res = await fetch(path);
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      return await rasterizeImageBlob(blob);
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
 }
 
 export type PdfMode = "technical" | "buyer" | "factory";
@@ -121,7 +145,7 @@ export async function buildPdfBlobUrl(project: Project, mode: PdfMode = "technic
   return URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
 }
 
-async function buildDoc(
+export async function buildDoc(
   project: Project,
   pack: TechPack,
   image: string | null,
@@ -242,7 +266,7 @@ function kvTable(rows: [string, Content][]): Content {
 function dataTable(
   header: string[],
   rows: Content[][],
-  widths: string[]
+  widths: (string | number)[]
 ): Content {
   const layout: TableLayout = {
     hLineWidth: (i: number, node: ContentTable) =>
@@ -255,10 +279,16 @@ function dataTable(
     paddingTop: () => 3.5,
     paddingBottom: () => 3.5,
   };
+  const normalizedWidths = widths.map((w) => {
+    if (typeof w === "number") return w;
+    if (w === "*" || w === "auto" || (typeof w === "string" && w.endsWith("%"))) return w;
+    const n = Number(w);
+    return Number.isFinite(n) ? n : w;
+  });
   return {
     table: {
       headerRows: 1,
-      widths,
+      widths: normalizedWidths,
       body: [
         header.map((h) => ({ text: h, bold: true, fontSize: 8, fillColor: "#f5f5f4" })),
         ...rows,
@@ -284,10 +314,13 @@ function coverPage(project: Project, pack: TechPack, image: string | null, backI
     },
   ];
 
-  if (image || backImage) {
+  const validFront = isValidPdfImage(image) ? image : null;
+  const validBack = isValidPdfImage(backImage) ? backImage : null;
+
+  if (validFront || validBack) {
     const imgs: Content[] = [];
-    if (image) imgs.push({ image, width: 225 });
-    if (backImage) imgs.push({ image: backImage, width: 225 });
+    if (validFront) imgs.push({ image: validFront, width: 225 });
+    if (validBack) imgs.push({ image: validBack, width: 225 });
     content.push({
       columns: imgs,
       alignment: "center",
@@ -295,8 +328,8 @@ function coverPage(project: Project, pack: TechPack, image: string | null, backI
     });
     content.push({
       columns: [
-        { text: image ? "FIG. 1 — FRONT VIEW" : "", fontSize: 7.5, color: MUTED, alignment: "center" },
-        { text: backImage ? "FIG. 2 — BACK VIEW" : "", fontSize: 7.5, color: MUTED, alignment: "center" },
+        { text: validFront ? "FIG. 1 — FRONT VIEW" : "", fontSize: 7.5, color: MUTED, alignment: "center" },
+        { text: validBack ? "FIG. 2 — BACK VIEW" : "", fontSize: 7.5, color: MUTED, alignment: "center" },
       ] as Content[],
       margin: [0, 0, 0, 16],
     });
@@ -311,7 +344,7 @@ function coverPage(project: Project, pack: TechPack, image: string | null, backI
       ["Sizes", (project.sizes ?? []).join(", ") || "—"],
       [
         "Colourways",
-        pack.colorways.map((c) => `${c.number} ${c.name}`).join(", ") || "—",
+        (pack.colorways ?? []).map((c) => `${c.number} ${c.name}`).join(", ") || "—",
       ],
       ["Production quantity", product.quantity != null ? String(product.quantity) + " units" : "—"],
       ["QA completeness", qa ? `${qa.completeness_pct}% (${qa.checks_passed}/${qa.checks_total} checks)` : "—"],
@@ -357,7 +390,7 @@ function specPage(project: Project, pack: TechPack): Content[] {
       ["Category", `${pack.product.category} · ${pack.product.product_type}`],
       ["Intended use", pack.product.intended_use ?? "—"],
       ["Target customer", pack.product.target_customer ?? "—"],
-      ["Reversible", pack.colorways.some((c) => c.face_b) ? "Yes — two wearing sides" : "No"],
+      ["Reversible", (pack.colorways ?? []).some((c) => c.face_b) ? "Yes — two wearing sides" : "No"],
     ]),
     { text: "Stitch specification", style: "h3" },
     kvTable(stitch),
@@ -376,9 +409,14 @@ function illustrationsPage(
   careSk: string | null
 ): Content[] {
   const content: Content[] = [heading("Product illustrations — flat sketches")];
+  const validFront = isValidPdfImage(frontSk) ? frontSk : null;
+  const validBack = isValidPdfImage(backSk) ? backSk : null;
+  const validGuide = isValidPdfImage(guideSk) ? guideSk : null;
+  const validCare = isValidPdfImage(careSk) ? careSk : null;
+
   const cols: Content[] = [];
-  if (frontSk) cols.push({ image: frontSk, width: 240 });
-  if (backSk) cols.push({ image: backSk, width: 240 });
+  if (validFront) cols.push({ image: validFront, width: 240 });
+  if (validBack) cols.push({ image: validBack, width: 240 });
   if (cols.length) {
     content.push({
       columns: cols,
@@ -386,7 +424,7 @@ function illustrationsPage(
       margin: [0, 0, 0, 6],
     });
     content.push({
-      text: `FIG. 1 — front flat sketch${backSk ? "   ·   FIG. 2 — back flat sketch" : ""}. Generated from the POM measurements (scale approx.).`,
+      text: `FIG. 1 — front flat sketch${validBack ? "   ·   FIG. 2 — back flat sketch" : ""}. Generated from the POM measurements (scale approx.).`,
       fontSize: 7.5,
       color: MUTED,
       alignment: "center",
@@ -396,12 +434,12 @@ function illustrationsPage(
     content.push({ text: "Sketches unavailable (image data missing).", style: "small" });
   }
 
-  if (careSk) {
+  if (validCare) {
     content.push({ text: "Care label — ISO 3758 symbols", style: "h3" });
     content.push({
       columns: [
         { text: "", width: "*" },
-        { image: careSk, width: 380, alignment: "center" },
+        { image: validCare, width: 380, alignment: "center" },
         { text: "", width: "*" },
       ],
       margin: [0, 0, 0, 8],
@@ -415,12 +453,12 @@ function illustrationsPage(
     });
   }
 
-  if (guideSk) {
+  if (validGuide) {
     content.push({ text: "Construction guide", style: "h3" });
     content.push({
       columns: [
         { text: "", width: "*" },
-        { image: guideSk, width: 300, alignment: "center" },
+        { image: validGuide, width: 300, alignment: "center" },
         { text: "", width: "*" },
       ],
       margin: [0, 0, 0, 6],
@@ -437,31 +475,66 @@ function illustrationsPage(
 }
 
 function bomPage(pack: TechPack, swatches: Array<string | null>): Content[] {
-  const materialRows: Content[][] = pack.materials.map((m, i) => [
-    swatches[i]
-      ? ({ image: swatches[i], fit: [44, 34] as [number, number], alignment: "center" } as Content)
-      : { text: "—", alignment: "center" as const },
-    { text: `${m.name} (${m.type})` },
-    { text: m.composition.value },
-    { text: m.gsm ? m.gsm.value : "TBD" },
-    { text: m.width_cm ? m.width_cm.value : "TBD" },
-    { text: m.color ?? m.notes ?? "" },
-    { text: m.composition.source, color: MUTED, fontSize: 7 },
-    { text: m.supplier ? `${m.supplier.name}${m.supplier.material_code ? ` · ${m.supplier.material_code}` : ""}${m.supplier.approval_status ? ` (${m.supplier.approval_status})` : ""}` : "—", color: MUTED, fontSize: 7 },
-  ]);
+  const materials = pack.materials ?? [];
+  const materialRows: Content[][] =
+    materials.length === 0
+      ? [
+          [
+            { text: "—", alignment: "center" as const },
+            { text: "No materials declared.", italics: true, color: MUTED },
+            { text: "—" },
+            { text: "—" },
+            { text: "—" },
+            { text: "—" },
+            { text: "—" },
+            { text: "—" },
+          ],
+        ]
+      : materials.map((m, i) => [
+          isValidPdfImage(swatches[i])
+            ? ({ image: swatches[i]!, fit: [44, 34] as [number, number], alignment: "center" } as Content)
+            : { text: "—", alignment: "center" as const },
+          { text: `${m.name} (${m.type})` },
+          { text: m.composition?.value ?? "—" },
+          { text: m.gsm?.value != null ? String(m.gsm.value) : "TBD" },
+          { text: m.width_cm?.value != null ? String(m.width_cm.value) : "TBD" },
+          { text: m.color ?? m.notes ?? "" },
+          { text: m.composition?.source ?? "—", color: MUTED, fontSize: 7 },
+          {
+            text: m.supplier
+              ? `${m.supplier.name}${m.supplier.material_code ? ` · ${m.supplier.material_code}` : ""}${m.supplier.approval_status ? ` (${m.supplier.approval_status})` : ""}`
+              : "—",
+            color: MUTED,
+            fontSize: 7,
+          },
+        ]);
 
-  const bomRows: Content[][] = pack.bom.map((row, i) => [
-    { text: String(i + 1) },
-    { text: row.component_name },
-    { text: row.material_name },
-    { text: row.specification },
-    { text: row.unit },
-    {
-      text: `${row.consumption}${row.consumption_is_estimated ? " (est.)" : ""}`,
-      color: row.consumption_is_estimated ? AMBER_TEXT : INK,
-    },
-    { text: row.color ?? "" },
-  ]);
+  const bom = pack.bom ?? [];
+  const bomRows: Content[][] =
+    bom.length === 0
+      ? [
+          [
+            { text: "—" },
+            { text: "No BOM items declared.", italics: true, color: MUTED },
+            { text: "—" },
+            { text: "—" },
+            { text: "—" },
+            { text: "—" },
+            { text: "—" },
+          ],
+        ]
+      : bom.map((row, i) => [
+          { text: String(i + 1) },
+          { text: row.component_name },
+          { text: row.material_name },
+          { text: row.specification },
+          { text: row.unit },
+          {
+            text: `${row.consumption}${row.consumption_is_estimated ? " (est.)" : ""}`,
+            color: row.consumption_is_estimated ? AMBER_TEXT : INK,
+          },
+          { text: row.color ?? "" },
+        ]);
 
   return [
     heading("Bill of materials"),
@@ -469,7 +542,7 @@ function bomPage(pack: TechPack, swatches: Array<string | null>): Content[] {
     dataTable(
       ["Swatch", "Material", "Composition", "GSM", "Width (cm)", "Colour", "Source", "Supplier"],
       materialRows,
-      ["60", "auto", "*", "auto", "auto", "auto", "auto", "auto"]
+      [60, "auto", "*", "auto", "auto", "auto", "auto", "auto"]
     ),
     { text: "Consumption (BOM)", style: "h3" },
     dataTable(
@@ -489,23 +562,38 @@ function measurementsPage(project: Project, pack: TechPack, sketch: string | nul
   const sizes = project.sizes ?? [];
   const widths = ["auto", "*", ...sizes.map(() => "auto"), "auto", "auto"];
   const header = ["POM", "Description", ...sizes, "Tol.", "Source"];
-  const rows: Content[][] = pack.measurements.map((m) => [
-    { text: m.id, bold: true },
-    { text: m.how_to_measure || m.name, fontSize: 8 },
-    ...sizes.map((size) => ({
-      text: m.values[size] != null ? String(m.values[size]) : "TBD",
-      alignment: "center" as const,
-    })),
-    { text: m.tolerance, alignment: "center" as const },
-    { text: m.source, color: MUTED, fontSize: 7 },
-  ]);
+  const measurements = pack.measurements ?? [];
+  const rows: Content[][] =
+    measurements.length === 0
+      ? [
+          [
+            { text: "—", bold: true },
+            { text: "No measurements defined in tech pack.", italics: true, color: MUTED },
+            ...sizes.map(() => ({ text: "—", alignment: "center" as const })),
+            { text: "—", alignment: "center" as const },
+            { text: "—", color: MUTED, fontSize: 7 },
+          ],
+        ]
+      : measurements.map((m) => [
+          { text: m.id, bold: true },
+          { text: m.how_to_measure || m.name, fontSize: 8 },
+          ...sizes.map((size) => ({
+            text: m.values && m.values[size] != null ? String(m.values[size]) : "TBD",
+            alignment: "center" as const,
+          })),
+          { text: m.tolerance ?? "—", alignment: "center" as const },
+          { text: m.source ?? "—", color: MUTED, fontSize: 7 },
+        ]);
+
+  const validSketch = isValidPdfImage(sketch) ? sketch : null;
+  const validSizeSketch = isValidPdfImage(sizeSketch) ? sizeSketch : null;
 
   const content: Content[] = [heading("Measurement specification (POM) & size chart")];
-  if (sketch) {
+  if (validSketch) {
     content.push({
       columns: [
         { text: "", width: "*" },
-        { image: sketch, width: 300, alignment: "center" },
+        { image: validSketch, width: 300, alignment: "center" },
         { text: "", width: "*" },
       ],
       margin: [0, 0, 0, 10],
@@ -520,17 +608,17 @@ function measurementsPage(project: Project, pack: TechPack, sketch: string | nul
   }
   content.push(dataTable(header, rows, widths));
   content.push({
-    text: `All measurements in ${pack.measurements[0]?.unit ?? "cm"}, laid flat unless stated. Values are AI-proposed from industry norms for this silhouette and require sample validation.`,
+    text: `All measurements in ${measurements[0]?.unit ?? "cm"}, laid flat unless stated. Values are AI-proposed from industry norms for this silhouette and require sample validation.`,
     style: "small",
     margin: [0, 6, 0, 0],
   });
 
-  if (sizeSketch) {
+  if (validSizeSketch) {
     content.push({ text: "Size chart visual", style: "h3" });
     content.push({
       columns: [
         { text: "", width: "*" },
-        { image: sizeSketch, width: 380, alignment: "center" },
+        { image: validSizeSketch, width: 380, alignment: "center" },
         { text: "", width: "*" },
       ],
       margin: [0, 0, 0, 6],
@@ -545,8 +633,8 @@ function measurementsPage(project: Project, pack: TechPack, sketch: string | nul
   }
 
   const gradeRows: Content[][] = [];
-  for (const mm of pack.measurements) {
-    const vals = sizes.map((s) => mm.values[s]).filter((v): v is number => typeof v === "number");
+  for (const mm of measurements) {
+    const vals = sizes.map((s) => mm.values?.[s]).filter((v): v is number => typeof v === "number");
     if (vals.length < 2) continue;
     const span = Math.max(...vals) - Math.min(...vals);
     const step = span / (vals.length - 1);
@@ -579,25 +667,44 @@ function measurementsPage(project: Project, pack: TechPack, sketch: string | nul
 
 function constructionPage(pack: TechPack): Content[] {
   const content: Content[] = [heading("Construction detail")];
-  for (const section of pack.construction) {
-    content.push({ text: section.section, style: "h3" });
-    content.push({
-      ol: section.items.map((item) => ({ text: item, fontSize: 9 })),
-    });
+  const construction = pack.construction ?? [];
+  if (construction.length === 0) {
+    content.push({ text: "No construction sections defined.", style: "small" });
+  } else {
+    for (const section of construction) {
+      content.push({ text: section.section, style: "h3" });
+      content.push({
+        ol: section.items.map((item) => ({ text: item, fontSize: 9 })),
+      });
+    }
   }
   return content;
 }
 
 function colorwaysPage(pack: TechPack): Content[] {
-  const rows: Content[][] = pack.colorways.map((c) => [
-    { text: c.number, bold: true },
-    { text: c.name },
-    { text: c.code ?? "—" },
-    { text: c.pantone ?? "—" },
-    { text: c.face_a ?? "—" },
-    { text: c.face_b ?? (c.reversible ? "TBD" : "—") },
-    { text: c.reversible ? "Reversible" : "—", fontSize: 8 },
-  ]);
+  const colorways = pack.colorways ?? [];
+  const rows: Content[][] =
+    colorways.length === 0
+      ? [
+          [
+            { text: "—", bold: true },
+            { text: "No colourways defined.", italics: true, color: MUTED },
+            { text: "—" },
+            { text: "—" },
+            { text: "—" },
+            { text: "—" },
+            { text: "—" },
+          ],
+        ]
+      : colorways.map((c) => [
+          { text: c.number, bold: true },
+          { text: c.name },
+          { text: c.code ?? "—" },
+          { text: c.pantone ?? "—" },
+          { text: c.face_a ?? "—" },
+          { text: c.face_b ?? (c.reversible ? "TBD" : "—") },
+          { text: c.reversible ? "Reversible" : "—", fontSize: 8 },
+        ]);
 
   return [
     heading("Colourways"),
@@ -616,46 +723,75 @@ function colorwaysPage(pack: TechPack): Content[] {
 
 function qcPage(pack: TechPack): Content[] {
   const content: Content[] = [heading("Quality control")];
-  const categories = Array.from(new Set(pack.quality_control.map((q) => q.category)));
-  for (const category of categories) {
-    content.push({ text: category, style: "h3" });
-    content.push({
-      ol: pack.quality_control
-        .filter((q) => q.category === category)
-        .map((q) => ({
-          text:
-            `${q.check}` +
-            (q.method ? ` — ${q.method}` : "") +
-            (q.standard ? ` (standard: ${q.standard})` : ""),
-          fontSize: 9,
-        })),
-    });
+  const qc = pack.quality_control ?? [];
+  const categories = Array.from(new Set(qc.map((q) => q.category)));
+  if (categories.length === 0) {
+    content.push({ text: "No quality control checks defined.", style: "small" });
+  } else {
+    for (const category of categories) {
+      content.push({ text: category, style: "h3" });
+      content.push({
+        ol: qc
+          .filter((q) => q.category === category)
+          .map((q) => ({
+            text:
+              `${q.check}` +
+              (q.method ? ` — ${q.method}` : "") +
+              (q.standard ? ` (standard: ${q.standard})` : ""),
+            fontSize: 9,
+          })),
+      });
+    }
   }
 
   content.push({ text: "Labels", style: "h3" });
+  const labels = pack.labels ?? [];
+  const labelRows: Content[][] =
+    labels.length === 0
+      ? [
+          [
+            { text: "No labels defined.", italics: true, color: MUTED },
+            { text: "—" },
+            { text: "—" },
+            { text: "—" },
+          ],
+        ]
+      : labels.map((l) => [
+          { text: l.name },
+          { text: l.type },
+          { text: l.placement ?? "TBD" },
+          { text: l.required ? "Yes" : "No" },
+        ]);
   content.push(
     dataTable(
       ["Label", "Type", "Placement", "Required"],
-      pack.labels.map((l) => [
-        { text: l.name },
-        { text: l.type },
-        { text: l.placement ?? "TBD" },
-        { text: l.required ? "Yes" : "No" },
-      ]),
+      labelRows,
       ["*", "auto", "*", "auto"]
     )
   );
 
   content.push({ text: "Packaging", style: "h3" });
+  const packaging = pack.packaging ?? [];
+  const packagingRows: Content[][] =
+    packaging.length === 0
+      ? [
+          [
+            { text: "No packaging items defined.", italics: true, color: MUTED },
+            { text: "—" },
+            { text: "—" },
+            { text: "—" },
+          ],
+        ]
+      : packaging.map((p) => [
+          { text: p.item },
+          { text: p.spec },
+          { text: p.unit },
+          { text: String(p.quantity) },
+        ]);
   content.push(
     dataTable(
       ["Item", "Spec", "Unit", "Qty"],
-      pack.packaging.map((p) => [
-        { text: p.item },
-        { text: p.spec },
-        { text: p.unit },
-        { text: String(p.quantity) },
-      ]),
+      packagingRows,
       ["*", "auto", "auto", "auto"]
     )
   );
@@ -697,8 +833,14 @@ function costSheetPage(project: Project, pack: TechPack): Content[] {
     {
       text: [
         { text: `Est. unit cost: `, bold: true },
-        { text: `${cs.currency} ${cs.perUnitRounded.toFixed(2)} / unit`, bold: true },
-        { text: `   ·   Est. total (${cs.qty} units): ${cs.currency} ${cs.grandTotal.toFixed(2)}`, bold: true },
+        {
+          text: `${cs.currency} ${(Number.isFinite(cs.perUnitRounded) ? cs.perUnitRounded : 0).toFixed(2)} / unit`,
+          bold: true,
+        },
+        {
+          text: `   ·   Est. total (${cs.qty} units): ${cs.currency} ${(Number.isFinite(cs.grandTotal) ? cs.grandTotal : 0).toFixed(2)}`,
+          bold: true,
+        },
       ],
       fontSize: 10,
       margin: [0, 8, 0, 4],
@@ -719,11 +861,17 @@ function costSheetPage(project: Project, pack: TechPack): Content[] {
 
 function assumptionsPage(project: Project, pack: TechPack): Content[] {
   const qa = project.qa_report;
+  const assumptions = pack.assumptions ?? [];
   const content: Content[] = [
     heading("Assumptions, warnings & revision control"),
     { text: "AI assumptions", style: "h3" },
-    {
-      ul: pack.assumptions.map((a) => ({
+  ];
+
+  if (assumptions.length === 0) {
+    content.push({ text: "No assumptions recorded.", style: "small" });
+  } else {
+    content.push({
+      ul: assumptions.map((a) => ({
         text:
           `${a.statement}` +
           (a.category ? ` [${a.category}]` : "") +
@@ -731,8 +879,8 @@ function assumptionsPage(project: Project, pack: TechPack): Content[] {
         fontSize: 9,
         color: INK,
       })),
-    },
-  ];
+    });
+  }
 
   if (qa && qa.blocking_errors.length > 0) {
     content.push({ text: "Blocking issues", style: "h3" });
@@ -793,7 +941,7 @@ function anatomyPage(spec: CoreProductSpec): Content[] {
           { text: o.machine ?? "—", fontSize: 8.5 },
           { text: o.description, fontSize: 8.5 },
         ]),
-        ["40", "70", "80", "*"]
+        [40, 70, 80, "*"]
       )
     );
   }
@@ -808,7 +956,7 @@ function anatomyPage(spec: CoreProductSpec): Content[] {
           { text: v.status, fontSize: 8.5 },
           { text: v.generation, fontSize: 8.5 },
         ]),
-        ["90", "130", "90", "90"]
+        [90, 130, 90, 90]
       )
     );
   }
@@ -841,7 +989,7 @@ function requirementsPage(spec: CoreProductSpec): Content[] {
           fontSize: 8,
         },
       ]),
-      ["46", "80", "*", "70", "28", "56", "80", "110"]
+      [46, 80, "*", 70, 28, 56, 80, 110]
     )
   );
   content.push({
@@ -873,7 +1021,7 @@ function readinessPage(spec: CoreProductSpec): Content[] {
         { text: d.status === "N_A" ? "—" : `${d.pct}%`, fontSize: 8.5, alignment: "center" },
         { text: d.status, fontSize: 8.5, alignment: "center" },
       ]),
-      ["*", "80", "80"]
+      ["*", 80, 80]
     )
   );
   if (r.factory_ready.blockers.length > 0) {
@@ -896,7 +1044,7 @@ function readinessPage(spec: CoreProductSpec): Content[] {
         { text: label, fontSize: 8.5 },
         { text: ok ? "✓ PASS" : "✕ NOT YET", fontSize: 8.5, bold: true, color: ok ? "#0c9358" : "#bc3838" },
       ]),
-      ["*", "100"]
+      ["*", 100]
     )
   );
   if (r.sample_ready.reasons.length > 0) {
